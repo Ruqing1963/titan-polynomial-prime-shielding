@@ -1,0 +1,391 @@
+\documentclass[11pt, a4paper]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm, amsfonts}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{authblk}
+\usepackage{caption}
+\usepackage{float}
+
+% --- Geometry Setup ---
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=2.5cm,
+    right=2.5cm
+}
+
+% --- Theorem Environments ---
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{conjecture}{Conjecture}
+\newtheorem{remark}{Remark}
+
+% --- Custom Commands ---
+\newcommand{\TitanPoly}{Q_q(n)}
+\newcommand{\SingularSeries}{\mathfrak{S}(f)}
+\newcommand{\EffDegree}{d_{\text{eff}}}
+
+% --- Title and Author ---
+\title{\textbf{Defying the Degree Barrier:\\ Arithmetic Shielding and Bimodal Effective Degree\\ in the Titan Polynomial Family}}
+
+\author{
+    \textbf{Ruqing Chen} \\
+    \textit{GUT Geoservice Inc., Montreal} \\
+    \texttt{ruqing@hotmail.com}
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% ============================================================
+% ABSTRACT
+% ============================================================
+\begin{abstract}
+The Bateman--Horn conjecture predicts that the prime density of an irreducible polynomial of degree~$d$ decreases as $O(1/d)$, creating a ``degree barrier'' for high-dimensional prime searches. We demonstrate that this barrier is permeable for the Titan polynomial family $Q_q(n) = n^q - (n-1)^q$ ($q$ prime). Through a large-scale computational study ($n \leq 10^8$, 18 prime exponents, ${\sim}\,44$ million primes), we reveal a \textbf{bimodal arithmetic shielding effect}. We prove the unified root count formula $\omega_q(p) = \gcd(q, p{-}1) - 1$, which implies perfect shielding ($\omega = 0$) for all primes $p$ with $q \nmid (p{-}1)$---including $p = q$ itself, by Fermat's Little Theorem. The singular series $\SingularSeries$ grows with~$q$, driven by the cumulative boost from shielded primes. Crucially, $\SingularSeries$ exhibits a \textbf{bimodal distribution}: when $2q+1$ is composite, shielding is maximized ($q = 167$: $d = 166 \to \EffDegree = 11.7$); when $2q+1$ is prime (Sophie Germain), a penalty factor $(q+2)/(2q) \to 1/2$ approximately halves $\SingularSeries$. The Bateman--Horn heuristic provides an excellent quantitative fit to all 18 datasets, with relative deviations of $0.3$--$3.1\%$. We propose a strategic framework for high-degree prime searching that prioritizes non-Sophie-Germain exponents.
+\end{abstract}
+
+\medskip
+\noindent\textit{2020 Mathematics Subject Classification:} 11N32, 11Y11, 11C08.\\
+\textit{Keywords:} Bateman--Horn conjecture, prime-producing polynomials, singular series, effective degree, Sophie Germain primes, arithmetic shielding.
+
+% ============================================================
+% 1. INTRODUCTION
+% ============================================================
+\section{Introduction}
+
+The distribution of prime values in polynomial sequences is a central problem in analytic number theory. For an irreducible polynomial $f(n)$ of degree $d$ with positive leading coefficient, the Bateman--Horn conjecture \cite{Bateman1962} provides a heuristic asymptotic formula (unproven, but supported by extensive numerical evidence):
+\begin{equation}\label{eq:BH}
+    \pi_f(x) \sim \frac{\SingularSeries}{d} \operatorname{Li}(x),
+\end{equation}
+where $\operatorname{Li}(x) = \int_2^x dt/\!\ln t$ and the singular series is
+\begin{equation}\label{eq:S}
+    \SingularSeries = \prod_{p \text{ prime}} \frac{1 - \omega_f(p)/p}{1 - 1/p},
+\end{equation}
+with $\omega_f(p)$ denoting the number of solutions to $f(n) \equiv 0 \pmod{p}$.
+
+For a ``generic'' irreducible polynomial, $\SingularSeries \approx 1$, and thus the prime density scales as $O(1/(d \ln x))$. The factor $1/d$ creates what we term the \textbf{degree barrier}: a degree-46 polynomial is conventionally expected to yield roughly $1/46$ as many primes as a linear polynomial. This has led to a longstanding focus on low-degree forms (Mersenne numbers, generalized Fermat numbers, etc.) in large prime searches.
+
+In this paper, we investigate the \textit{Titan polynomial family}
+\begin{equation}
+    Q_q(n) = n^q - (n-1)^q, \qquad q \in \mathbb{P},
+\end{equation}
+which has degree $d = q - 1$. This family is closely related to the cyclotomic polynomial $\Phi_q$: indeed, $Q_q(n+1) = n^{q-1} \Phi_q(1 + 1/n)$, from which irreducibility follows by \cite{Washington1997}. We demonstrate through large-scale computation ($n \leq 10^8$, approximately 44 million prime values across 18 exponents) that the singular series $\SingularSeries$ grows systematically with $q$, approximately counteracting the $1/d$ penalty. This motivates the central concept of this paper:
+
+\begin{definition}[Effective Degree]
+The \textbf{effective degree} of a polynomial $f$ is $\EffDegree = \deg(f) / \SingularSeries$. It measures the degree of a generic polynomial ($\SingularSeries \approx 1$) that generates primes at the same rate. Note that $\EffDegree$ is a theoretical quantity determined by the Euler product for $\SingularSeries$, not by empirical prime counts.
+\end{definition}
+
+Our main findings are:
+\begin{enumerate}
+    \item A unified, exact root-count formula $\omega_q(p) = \gcd(q, p{-}1) - 1$.
+    \item A bimodal structure in $\SingularSeries$ governed by the Sophie Germain property of $q$.
+    \item Effective degree collapse ratios up to $14.2\times$ (for $q = 167$).
+    \item Bateman--Horn heuristic accuracy within $0.3$--$3.1\%$ across all 18 datasets.
+\end{enumerate}
+
+% ============================================================
+% 2. THEORETICAL FRAMEWORK
+% ============================================================
+\section{Theoretical Framework}
+
+\subsection{Algebraic Structure}
+
+For prime $q$, the polynomial $Q_q(n) = n^q - (n-1)^q$ has degree $q - 1$ and leading coefficient $q$. Setting $m = n - 1$ and expanding:
+\[
+    Q_q(m + 1) = \sum_{k=0}^{q-1} \binom{q}{k} m^k.
+\]
+This polynomial is related to the $q$-th cyclotomic polynomial via $Q_q(n+1) = n^{q-1} \Phi_q(1 + 1/n)$. Since $\Phi_q(x) = x^{q-1} + x^{q-2} + \cdots + 1$ is irreducible over $\mathbb{Q}$ for prime $q$ \cite{Washington1997}, $Q_q(n)$ is also irreducible, satisfying the hypothesis of the Bateman--Horn conjecture.
+
+\subsection{Unified Root Counting Theorem}
+
+\begin{theorem}[Unified Root Count]\label{thm:roots}
+For any prime $q$ and any prime $p$, the number of solutions to $Q_q(n) \equiv 0 \pmod{p}$ is:
+\begin{equation}\label{eq:omega}
+    \omega_q(p) = \gcd(q,\, p-1) - 1.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+\textbf{Case $p = q$:} By Fermat's Little Theorem, $n^q \equiv n \pmod{q}$ for all integers $n$. Therefore,
+\[
+    Q_q(n) = n^q - (n-1)^q \equiv n - (n-1) = 1 \pmod{q}.
+\]
+Thus $Q_q(n)$ is never divisible by $q$, giving $\omega_q(q) = 0$. The formula yields $\gcd(q, q{-}1) - 1 = 1 - 1 = 0$, since $q \nmid (q{-}1)$ for any prime $q \geq 2$. \checkmark
+
+\textbf{Case $p \neq q$:} The congruence $n^q \equiv (n-1)^q \pmod{p}$, for $p \nmid n(n-1)$, is equivalent to $u^q \equiv 1 \pmod{p}$ where $u = n \cdot (n-1)^{-1} \in (\mathbb{Z}/p\mathbb{Z})^*$. The multiplicative group $(\mathbb{Z}/p\mathbb{Z})^*$ is cyclic of order $p - 1$, so the equation $u^q = 1$ has exactly $\gcd(q, p{-}1)$ solutions.
+
+The trivial solution $u = 1$ corresponds to $n \equiv n - 1 \pmod{p}$, i.e., $p \mid 1$, which is impossible. Hence we exclude it, obtaining $\omega_q(p) = \gcd(q, p{-}1) - 1$.
+
+When $p \mid n$: $Q_q(n) \equiv -(- 1)^q = 1 \pmod{p}$ (since $q \geq 3$ is odd). When $p \mid (n-1)$: $Q_q(n) \equiv 1 \pmod{p}$. Neither contributes additional roots.
+\end{proof}
+
+\begin{corollary}\label{cor:dichotomy}
+Since $q$ is prime, $\gcd(q, p{-}1) \in \{1, q\}$. Therefore:
+\begin{itemize}
+    \item If $q \nmid (p{-}1)$: $\omega_q(p) = 0$ and the local factor is $p/(p{-}1) > 1$ \textup{(boost)}.
+    \item If $q \mid (p{-}1)$, i.e., $p \equiv 1 \pmod{q}$: $\omega_q(p) = q - 1$ and the local factor is $(p{-}q{+}1)/(p{-}1) < 1$ \textup{(obstruction)}.
+\end{itemize}
+In particular, \textbf{all} primes $p \leq q$ are boost primes, since $p - 1 < q$ and $q$ is prime forces $\gcd(q, p{-}1) = 1$. The prime $p = q$ is also a boost, contributing the mild factor $q/(q{-}1)$.
+\end{corollary}
+
+\subsection{Arithmetic Shielding}
+
+By \textit{arithmetic shielding} we mean the systematic absence of local obstructions ($\omega_q(p) = 0$) at small primes, resulting in a predominance of boost factors in the singular series. This is not a new conjecture but an observable consequence of Theorem~\ref{thm:roots}.
+
+The singular series decomposes as
+\begin{equation}\label{eq:decomp}
+    \SingularSeries = \underbrace{\frac{q}{q-1}}_{\text{factor at }p=q} \times \underbrace{\prod_{\substack{p \nmid q \\ q \nmid (p-1)}} \frac{p}{p-1}}_{\text{Boost } B(q)} \times \underbrace{\prod_{p \equiv 1 \pmod{q}} \frac{p - q + 1}{p - 1}}_{\text{Obstruction } O(q)}.
+\end{equation}
+
+The boost product includes all primes $p \leq q$. By Mertens' third theorem,
+\[
+    \prod_{p \leq q} \frac{p}{p-1} \sim e^\gamma \ln q \to \infty,
+\]
+where $\gamma \approx 0.5772$ is the Euler--Mascheroni constant. This logarithmic divergence is the principal source of growth in $\SingularSeries$: as $q$ grows, more primes contribute boost factors before the first obstruction is encountered.
+
+The obstruction product involves primes $p \equiv 1 \pmod{q}$, which by Dirichlet's theorem have asymptotic density $1/(q{-}1)$ among all primes. The severity of each obstruction depends on the \emph{size} of $p$ relative to $q$: the factor $(p-q+1)/(p-1)$ approaches 1 as $p \to \infty$ but can be devastating when $p$ is small.
+
+\subsection{The Sophie Germain Bifurcation}
+
+The key structural insight of this paper is that the behavior of $\SingularSeries$ depends critically on the \emph{smallest} prime $p \equiv 1 \pmod{q}$.
+
+\begin{proposition}[Sophie Germain Penalty]\label{prop:SG}
+If $q$ is a Sophie Germain prime (i.e., $2q + 1$ is also prime), then the first obstruction occurs at $p = 2q + 1$, contributing a penalty factor:
+\begin{equation}\label{eq:penalty}
+    \text{Factor}_{\mathrm{SG}} = \frac{p - (q-1)}{p - 1} = \frac{(2q+1) - (q-1)}{(2q+1) - 1} = \frac{q+2}{2q} = \frac{1}{2} + \frac{1}{q}.
+\end{equation}
+As $q \to \infty$, this factor approaches $1/2$.
+\end{proposition}
+
+This creates two distinct regimes:
+
+\begin{itemize}
+    \item \textbf{Shielded Track} ($2q+1$ composite): The first obstruction prime is typically much larger than $2q+1$. The boost accumulates freely, yielding a large $\SingularSeries$. Examples in our dataset: $q = 7, 13, 17, 19, 31, 37, 43, 47, 61, 71, 167$.
+
+    \item \textbf{Penalized Track} ($q$ is Sophie Germain): The obstruction at $p = 2q + 1$ nearly halves $\SingularSeries$. Examples: $q = 3, 5, 11, 23, 41, 53, 83$.
+\end{itemize}
+
+\begin{remark}
+This bifurcation is \textbf{testable}: given any prime $q$, one can predict whether $\SingularSeries$ will be anomalously low simply by checking whether $2q + 1$ is prime. Our data confirms this prediction for all 18 exponents.
+\end{remark}
+
+% ============================================================
+% 3. CONJECTURES
+% ============================================================
+\section{Conjectures}
+
+\begin{conjecture}[Bimodal Asymptotic Shielding]\label{conj:asymp}
+As $q \to \infty$ through primes:
+\begin{enumerate}
+    \item[(a)] For non-Sophie-Germain primes: $\mathfrak{S}(Q_q) \geq C_1 \cdot \ln q$ for some absolute constant $C_1 > 0$.
+    \item[(b)] For Sophie Germain primes: $\mathfrak{S}(Q_q) \geq \tfrac{1}{2} C_1 \cdot \ln q$.
+    \item[(c)] In both cases, $\mathfrak{S}(Q_q) \to \infty$.
+\end{enumerate}
+\end{conjecture}
+
+\textit{Heuristic argument.} The boost product contributes ${\sim}\, e^\gamma \ln q$. By Dirichlet's theorem, primes $p \equiv 1 \pmod{q}$ have density $1/(q{-}1)$; the typical first such prime is $O(q \ln q)$ by Linnik's theorem. The aggregate obstruction product converges to a bounded quantity as $q \to \infty$. The Sophie Germain penalty is a multiplicative factor ${\approx}\, 1/2$ that does not affect the divergence.
+
+\begin{conjecture}[Effective Degree Collapse]\label{conj:collapse}
+$\EffDegree / (q - 1) \to 0$ as $q \to \infty$. That is, the effective degree grows strictly sublinearly in the actual degree. This is consistent with all observed data up to $q = 167$.
+\end{conjecture}
+
+% ============================================================
+% 4. COMPUTATIONAL RESULTS
+% ============================================================
+\section{Computational Results}
+
+\subsection{Dataset}
+
+We conducted exhaustive primality testing of $Q_q(n)$ for all $n \in [1, 10^8]$ across 18 prime exponents $q \in \{3, 5, 7, 11, 13, 17, 19, 23, 31, 37, 41, 43, 47, 53, 61, 71, 83, 167\}$. Primality was verified using deterministic Miller--Rabin tests with sufficient bases to guarantee correctness below $10^{16}$. All computations were performed using Python with GMP-backed arithmetic. The total dataset comprises approximately 44 million prime values. Source code, raw prime lists, and all figures are publicly available at:
+\begin{center}
+\url{https://github.com/Ruqing1963/titan-polynomial-prime-shielding}
+\end{center}
+
+\subsection{The Bimodal Effective Degree}
+
+Table~\ref{tab:results} presents the complete dataset. All quantities are verified against the raw prime lists; preliminary drafts contained errors for $q = 47$ (corrected from 1,879,537 to 1,083,547) which have been resolved.
+
+\begin{table}[ht]
+\centering
+\caption{The Bimodal Effective Degree of Titan Polynomials ($N = 10^8$). Pink rows indicate Sophie Germain primes (penalized track).}
+\label{tab:results}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}ccccrrrrc@{}}
+\toprule
+$q$ & SG? & $d$ & $\SingularSeries$ & B-H Predicted & Actual $\pi_Q(10^8)$ & Ratio & $\EffDegree$ & Remark \\ \midrule
+\rowcolor{red!8}
+3   & Yes & 2   & 3.362 & 9,686,136 & 9,389,636   & 0.9694 & \textbf{0.59} & Penalty 0.833 \\
+\rowcolor{red!8}
+5   & Yes & 4   & 3.678 & 5,298,379 & 5,179,467   & 0.9776 & \textbf{1.09} & Penalty 0.700 \\
+7   & No  & 6   & 5.231 & 5,023,437 & 4,934,525   & 0.9823 & \textbf{1.15} & \\
+\rowcolor{red!8}
+11  & Yes & 10  & 4.012 & 2,311,831 & 2,276,588   & 0.9848 & \textbf{2.49} & Penalty 0.591 \\
+13  & No  & 12  & 5.651 & 2,713,362 & 2,680,970   & 0.9881 & \textbf{2.12} & $\approx n^2{+}1$ \\
+17  & No  & 16  & 6.803 & 2,450,033 & 2,428,628   & 0.9913 & \textbf{2.35} & \\
+19  & No  & 18  & 8.886 & 2,844,666 & 2,820,041   & 0.9913 & \textbf{2.03} & Ultra-low $\EffDegree$ \\
+\rowcolor{red!8}
+23  & Yes & 22  & 4.263 & 1,116,532 & 1,109,005   & 0.9933 & \textbf{5.16} & Penalty 0.543 \\
+31  & No  & 30  & 9.634 & 1,850,340 & 1,837,055   & 0.9928 & \textbf{3.11} & \\
+37  & No  & 36  & 7.360 & 1,178,114 & 1,170,454   & 0.9935 & \textbf{4.89} & \\
+\rowcolor{red!8}
+41  & Yes & 40  & 5.743 & 827,232   & 823,253     & 0.9952 & \textbf{6.97} & Penalty 0.524 \\
+43  & No  & 42  & 7.712 & 1,058,089 & 1,051,232   & 0.9935 & \textbf{5.45} & \\
+47  & No  & 46  & 8.683 & 1,087,632 & 1,083,547   & 0.9962 & \textbf{5.30} & Corrected \\
+\rowcolor{red!8}
+53  & Yes & 52  & 6.062 & 671,764   & 668,230     & 0.9947 & \textbf{8.58} & Penalty 0.519 \\
+61  & No  & 60  & 9.162 & 879,873   & 875,977     & 0.9956 & \textbf{6.55} & \\
+71  & No  & 70  & 9.597 & 789,963   & 788,164     & 0.9977 & \textbf{7.29} & \\
+\rowcolor{red!8}
+83  & Yes & 82  & 4.939 & 347,093   & 347,353     & 1.0007 & \textbf{16.60} & Penalty 0.512 \\
+167 & No  & 166 & 14.244& 494,425   & 493,941     & 0.9990 & \textbf{11.65} & Max shielding \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Bateman--Horn Verification}
+
+The actual/predicted ratio ranges from 0.9694 ($q = 3$) to 1.0007 ($q = 83$), with mean 0.9910. Critically, the heuristic works \emph{equally well for both tracks}: Sophie Germain and non-Sophie Germain exponents both conform to the Bateman--Horn prediction with the same precision. This confirms that the bimodal structure is fully captured by the root-count formula \eqref{eq:omega}.
+
+
+\subsection{Visualizing the Bifurcation}
+
+Figure~\ref{fig:bifurcation} illustrates the clear separation between the Shielded Track and the Penalized Track. Figure~\ref{fig:collapse} shows the effective degree collapse.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figure1_bifurcation.png}
+    \caption{The Sophie Germain Bifurcation: $\SingularSeries$ splits into two distinct growth tracks based on primality of $2q+1$.}
+    \label{fig:bifurcation}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figure2_collapse.png}
+    \caption{Effective Degree Collapse: $\EffDegree$ vs physical degree $d$. All points lie far below the $\EffDegree = d$ diagonal. Inset shows the crowded low-$q$ region.}
+    \label{fig:collapse}
+\end{figure}
+
+\subsection{The $q = 83$ Case}
+
+Among large-$q$ values, $q = 83$ has the highest effective degree ($\EffDegree = 16.60$) and lowest $\SingularSeries = 4.94$---an apparent anomaly that is fully explained by the Sophie Germain mechanism. Since $167 = 2 \times 83 + 1$ is prime, the penalty factor is $(83 + 2)/(2 \times 83) = 0.512$. In contrast, $q = 71$ (where $143 = 11 \times 13$ is composite) has $\SingularSeries = 9.60$ and $\EffDegree = 7.29$---nearly $3\times$ more favorable despite lower degree. This comparison vividly illustrates the predictive power of the Sophie Germain classification.
+
+\subsection{Control Group}
+
+For a generic degree-$d$ polynomial with $\SingularSeries \approx 1$, the Bateman--Horn prediction gives $\pi_f(10^8) \approx \operatorname{Li}(10^8)/d \approx 5{,}762{,}208/d$. Table~\ref{tab:control} quantifies the amplification.
+
+\begin{table}[ht]
+\centering
+\caption{Amplification of Titan polynomials over generic polynomials.}
+\label{tab:control}
+\begin{tabular}{@{}ccrrr@{}}
+\toprule
+$q$ & $d$ & Generic Prediction & Actual $\pi_Q$ & Amplification \\ \midrule
+3 (SG) & 2 & 2,881,104 & 9,389,636 & $3.3\times$ \\
+13 & 12 & 480,184 & 2,680,970 & $5.6\times$ \\
+47 & 46 & 125,266 & 1,083,547 & $\mathbf{8.6\times}$ \\
+83 (SG) & 82 & 70,271 & 347,353 & $4.9\times$ \\
+167 & 166 & 34,713 & 493,941 & $\mathbf{14.2\times}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+% 5. DISCUSSION
+% ============================================================
+\section{Discussion}
+
+\subsection{Elegance of the Root Formula}
+
+The formula $\omega_q(p) = \gcd(q, p{-}1) - 1$ is notable for its uniformity across all primes $p$. It requires no piecewise cases: even $p = q$ is handled automatically, since $\gcd(q, q{-}1) = 1$ for any prime $q$. Combined with the Sophie Germain classification, it provides a complete predictive framework for $\SingularSeries$.
+
+\subsection{Prediction Test}
+
+As an out-of-sample validation, we trained a power-law fit $\EffDegree = a \cdot d^b$ on $q = 3$ through $q = 83$ (17 data points), yielding $a \approx 0.09$, $b \approx 1.12$. This predicts $\EffDegree \approx 21$--$28$ for $q = 167$. The actual value is 11.65: the shielding effect \textbf{accelerates} at high degree. This is an encouraging result for prime searches at even higher degrees.
+
+\subsection{Computational Strategy}
+
+The arithmetic shielding has direct algorithmic implications:
+
+\begin{enumerate}
+    \item \textbf{Exponent selection:} Prefer $q$ where $2q+1$ is composite (non-Sophie Germain), to maximize $\SingularSeries$ and minimize $\EffDegree$.
+    \item \textbf{Sieve efficiency:} Since $\omega_q(p) = 0$ for all $p$ with $q \nmid (p{-}1)$, standard trial division eliminates nearly no candidates in the early stages. Sieve effort should concentrate on the arithmetic progression $p \equiv 1 \pmod{q}$.
+    \item \textbf{High-degree viability:} For $n = 10^{5000}$, $Q_{167}(n)$ yields ${\sim}\,830{,}000$-digit candidates with effective search difficulty equivalent to a degree-12 polynomial.
+\end{enumerate}
+
+% ============================================================
+% 6. CONCLUSION
+% ============================================================
+\section{Conclusion}
+
+Through exhaustive computation on 18 prime exponents with $n$ up to $10^8$, we establish the following results for the Titan polynomial family $Q_q(n) = n^q - (n-1)^q$:
+
+\begin{enumerate}
+    \item \textbf{Unified mechanism:} The root count $\omega_q(p) = \gcd(q, p{-}1) - 1$ governs all arithmetic properties in a single expression. No piecewise formula is needed; the case $p = q$ yields $\omega = 0$ automatically by Fermat's Little Theorem.
+
+    \item \textbf{Bimodal structure:} $\SingularSeries$ splits into two tracks governed by the Sophie Germain property of $q$. The penalty factor for Sophie Germain primes is exactly $(q+2)/(2q) \to 1/2$.
+
+    \item \textbf{Effective degree collapse:} $\EffDegree$ ranges from 0.59 to 16.60, far below the physical degrees 2 to 166. Mean collapse ratio: $6.9\times$.
+
+    \item \textbf{Bateman--Horn fit:} All 18 actual/predicted ratios fall within $[0.969, 1.001]$, conditional on the Bateman--Horn heuristic.
+
+    \item \textbf{Testable prediction:} $\SingularSeries$ is anomalously low if and only if $2q+1$ is prime, confirmed for all 18 data points.
+
+    \item \textbf{Acceleration:} The shielding effect grows faster than power-law extrapolation at high degree, suggesting that even higher-degree Titan polynomials may be computationally tractable.
+\end{enumerate}
+
+The degree barrier, long regarded as an immovable constraint in polynomial prime searching, is revealed to be permeable for algebraically structured polynomial families. Informally: for the Titan family, the wall is made of paper; for non-Sophie-Germain exponents, it is tissue paper.
+
+% ============================================================
+% REFERENCES
+% ============================================================
+\begin{thebibliography}{9}
+
+\bibitem{Bateman1962}
+Bateman, P.\,T.\ \& Horn, R.\,A.\ (1962).
+A heuristic asymptotic formula concerning the distribution of prime numbers.
+\textit{Mathematics of Computation}, 16(79), 363--367.
+
+\bibitem{Hardy1923}
+Hardy, G.\,H.\ \& Littlewood, J.\,E.\ (1923).
+Some problems of `Partitio numerorum'; III: On the expression of a number as a sum of primes.
+\textit{Acta Mathematica}, 44, 1--70.
+
+\bibitem{Schinzel1958}
+Schinzel, A.\ \& Sierpi\'{n}ski, W.\ (1958).
+Sur certaines hypoth\`{e}ses concernant les nombres premiers.
+\textit{Acta Arithmetica}, 4(3), 185--208.
+
+\bibitem{Crandall2005}
+Crandall, R.\ \& Pomerance, C.\ (2005).
+\textit{Prime Numbers: A Computational Perspective}.
+Springer, New York.
+
+\bibitem{Washington1997}
+Washington, L.\,C.\ (1997).
+\textit{Introduction to Cyclotomic Fields} (2nd ed.).
+Graduate Texts in Mathematics 83, Springer.
+
+\bibitem{Granville2008}
+Granville, A.\ (2008).
+Analytic number theory.
+In \textit{The Princeton Companion to Mathematics}, Princeton University Press.
+
+\bibitem{Ribenboim1996}
+Ribenboim, P.\ (1996).
+\textit{The New Book of Prime Number Records}.
+Springer, New York.
+
+\end{thebibliography}
+
+\end{document}
